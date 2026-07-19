@@ -14,15 +14,17 @@ jobs:
         uses: actions/checkout@v4
 
 
-- name: 安装 Flutter
-  uses: subosito/flutter-action@v2
-  with:
-    flutter-version: '3.44.0'
-    channel: master
+      - name: 安装 Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.0'
+          channel: master
 
 
       - name: 查看环境
-        run: flutter doctor
+        run: |
+          flutter --version
+          dart --version
 
 
       - name: 编译 Android TV
