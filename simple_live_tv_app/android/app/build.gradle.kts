@@ -1,70 +1,85 @@
-import java.util.Properties
-import java.io.FileInputStream
+name: Build Android TV APK
 
-plugins {
-    id("com.android.application")
-    id("kotlin-android")
-    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
-    id("dev.flutter.flutter-gradle-plugin")
-}
+on:
+  workflow_dispatch:
 
-val keystoreProperties = Properties()
-val keystorePropertiesFile = rootProject.file("key.properties")
-if (keystorePropertiesFile.exists()) {
-    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
-}
+jobs:
+  build:
 
-android {
-    namespace = "com.xycz.simple_live_tv"
-    compileSdk = flutter.compileSdkVersion
-    ndkVersion = flutter.ndkVersion
+    runs-on: ubuntu-latest
 
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
-    }
+    steps:
 
-    kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_11.toString()
-    }
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.xycz.simple_live_tv"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
-        versionCode = flutter.versionCode
-        versionName = flutter.versionName
-    }
 
-    signingConfigs {
-        create("release") {
-            keyAlias = keystoreProperties["keyAlias"] as String
-            keyPassword = keystoreProperties["keyPassword"] as String
-            storeFile = keystoreProperties["storeFile"]?.let { file(it) }
-            storePassword = keystoreProperties["storePassword"] as String
-            isV1SigningEnabled = true
-            isV2SigningEnabled = true
-        }
-    }
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: master
 
-    buildTypes {
-        release {
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("release")
-            isMinifyEnabled = true
-            isShrinkResources = true
-            proguardFiles(
-                // Default file with automatically generated optimization rules.
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
-        }
-    }
-}
 
-flutter {
-    source = "../.."
-}
+      - name: Flutter info
+        run: |
+          flutter --version
+          dart --version
+
+
+      - name: Get dependencies
+        run: |
+          cd simple_live_tv_app
+          flutter pub get
+
+
+      - name: Fix Android signing
+        run: |
+          python3 - <<'EOF'
+          from pathlib import Path
+
+          p = Path("simple_live_tv_app/android/app/build.gradle.kts")
+
+          s = p.read_text()
+
+          s = s.replace(
+          'keyAlias = keystoreProperties["keyAlias"] as String',
+          'keyAlias = keystoreProperties["keyAlias"] as String?'
+          )
+
+          s = s.replace(
+          'keyPassword = keystoreProperties["keyPassword"] as String',
+          'keyPassword = keystoreProperties["keyPassword"] as String?'
+          )
+
+          s = s.replace(
+          'storePassword = keystoreProperties["storePassword"] as String',
+          'storePassword = keystoreProperties["storePassword"] as String?'
+          )
+
+          s = s.replace(
+          'isMinifyEnabled = true',
+          'isMinifyEnabled = false'
+          )
+
+          s = s.replace(
+          'isShrinkResources = true',
+          'isShrinkResources = false'
+          )
+
+          p.write_text(s)
+
+          EOF
+
+
+      - name: Build APK
+        run: |
+          cd simple_live_tv_app
+          flutter build apk --release
+
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: simple-live-tv-release
+          path: |
+            simple_live_tv_app/build/app/outputs/flutter-apk/*.apk
