@@ -5,38 +5,40 @@ on:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
 
     steps:
 
-      - name: 下载源码
+      - name: Checkout
         uses: actions/checkout@v4
 
 
-      - name: 安装 Flutter
+      - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.44.0'
-          channel: master
+          channel: beta
 
 
-      - name: 查看环境
-        run: |
+      - name: Flutter info
+        run:
           flutter --version
-          dart --version
 
 
-      - name: 编译 Android TV
+      - name: Get packages
         run: |
           cd simple_live_tv_app
           flutter pub get
+
+
+      - name: Build APK
+        run: |
+          cd simple_live_tv_app
           flutter build apk --release
 
 
-      - name: 保存 APK
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: simple-live-tv-apk
-          path: |
-            simple_live_tv_app/build/app/outputs/flutter-apk/*.apk
+          path: simple_live_tv_app/build/app/outputs/flutter-apk/*.apk
