@@ -1,0 +1,40 @@
+name: Build Android TV APK
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: 下载源码
+        uses: actions/checkout@v4
+
+
+      - name: 安装 Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.38.0'
+          channel: stable
+
+
+      - name: 查看环境
+        run: flutter doctor
+
+
+      - name: 编译 Android TV
+        run: |
+          cd simple_live_tv_app
+          flutter pub get
+          flutter build apk --release
+
+
+      - name: 保存 APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: simple-live-tv-apk
+          path: |
+            simple_live_tv_app/build/app/outputs/flutter-apk/*.apk
